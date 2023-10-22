@@ -13,7 +13,7 @@ provider "libvirt" {
 resource "libvirt_cloudinit_disk" "commoninit" {
   name = "commoninit.iso"
   pool = libvirt_pool.ubuntu_pool.name
-  user_data = templatefile("${path.module}/cloud_init.cfg", {ssh_pubkey = var.ssh_pubkey})
+  user_data = templatefile("${path.module}/cloud_init.cfg", {ssh_pubkey = var.ssh_pubkey, username = var.username})
 }
 
 resource "libvirt_pool" "ubuntu_pool" {
@@ -23,7 +23,8 @@ resource "libvirt_pool" "ubuntu_pool" {
 }
 
 resource "libvirt_volume" "ubuntu_image" {
-  name = "ubuntu_amd64"
+  count = var.vm_count
+  name = "ubuntu_amd64_guest${count.index}"
   pool = libvirt_pool.ubuntu_pool.name
   source = var.ubuntu_image_source
 }
@@ -31,12 +32,12 @@ resource "libvirt_volume" "ubuntu_image" {
 resource "libvirt_domain" "kvm_guest" {
   count = var.vm_count
   name = "guest${count.index}"
-  description = "Kvm VM (Node 0)"
+  description = "Kvm VM (Node ${count.index})"
   vcpu = 1
   memory = 2048
   running = "true"
   disk {
-    volume_id = libvirt_volume.ubuntu_image.id
+    volume_id = libvirt_volume.ubuntu_image[count.index].id
   }
   network_interface {
     network_name = "default"
