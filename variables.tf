@@ -10,6 +10,11 @@ variable "vm_count" {
   description = "Numbers of guest vms to create"
 }
 
+variable "username" {
+  type = string
+  description = "Default user for guest machines"
+}
+
 variable "ssh_pubkey" {
   type = string
   description = "SSH public key to propagate to guest machines"
