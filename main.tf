@@ -3,6 +3,9 @@ terraform {
     libvirt = {
       source = "dmacvicar/libvirt"
     }
+    null = {
+      source = "hashicorp/null"
+    }
   }
 }
 
@@ -29,9 +32,32 @@ resource "libvirt_volume" "ubuntu_image" {
   source = var.ubuntu_image_source
 }
 
+//resource "null_resource" "libvirt_network" {
+//  provisioner "local-exec" {
+//    command = "virsh net-define ${path.module}/libvirt_custom_network.xml && virsh net-start libvirt_custom_network"
+//  }
+
+//  provisioner "local-exec" {
+//    when = destroy
+//    command = "virsh net-destroy libvirt_custom_network && virsh net-undefine libvirt_custom_network"
+//  }
+//}
+
+resource "libvirt_network" "kube_network" {
+  name = "k8snet"
+  mode = "nat"
+  addresses = ["192.168.1.0/24"]
+  dns {
+    local_only = true
+  }
+  dhcp {
+    enabled = false
+  } 
+}
+
 resource "libvirt_domain" "kvm_guest" {
   count = var.vm_count
-  name = "guest${count.index}"
+  name = var.hostnames[count.index]
   description = "Kvm VM (Node ${count.index})"
   vcpu = 1
   memory = 2048
@@ -40,7 +66,14 @@ resource "libvirt_domain" "kvm_guest" {
     volume_id = libvirt_volume.ubuntu_image[count.index].id
   }
   network_interface {
-    network_name = "default"
+    network_name = libvirt_network.kube_network.name
+    hostname = var.hostnames[count.index]
+    addresses = [cidrhost(libvirt_network.kube_network.addresses[0], count.index+2)]
+    wait_for_lease = false
   }
-  cloudinit = libvirt_cloudinit_disk.commoninit.id 
+  cloudinit = libvirt_cloudinit_disk.commoninit.id
+
+  //depends_on = [
+    //null_resource.libvirt_network
+  //]
 }

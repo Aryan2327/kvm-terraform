@@ -19,3 +19,8 @@ variable "ssh_pubkey" {
   type = string
   description = "SSH public key to propagate to guest machines"
 }
+
+variable "hostnames" {
+  type = list(string)
+  description = "List of VM hostnames. Should be consistent with vm_count"
+}
