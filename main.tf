@@ -13,6 +13,10 @@ provider "libvirt" {
   uri = "qemu:///system"
 }
 
+locals {
+  subnet = "192.168.1.0/24"
+}
+
 resource "libvirt_cloudinit_disk" "commoninit" {
   name = "commoninit.iso"
   pool = libvirt_pool.ubuntu_pool.name
@@ -45,14 +49,30 @@ resource "libvirt_volume" "ubuntu_image" {
 
 resource "libvirt_network" "kube_network" {
   name = "k8snet"
+  domain = var.domain
+  autostart = true
   mode = "nat"
-  addresses = ["192.168.1.0/24"]
+  addresses = [local.subnet]
   dns {
     local_only = true
+    dynamic "hosts" {
+      for_each = var.hostnames
+      content {
+        ip = cidrhost(local.subnet, hosts.key+2)
+        hostname = hosts.value
+      }
+    }
   }
   dhcp {
     enabled = false
-  } 
+  }
+
+  dnsmasq_options {
+    options {
+      option_name = "server"
+      option_value = "/${var.domain}/${cidrhost(local.subnet, 1)}"
+    }
+  }
 }
 
 resource "libvirt_domain" "kvm_guest" {

@@ -24,3 +24,8 @@ variable "hostnames" {
   type = list(string)
   description = "List of VM hostnames. Should be consistent with vm_count"
 }
+
+variable "domain" {
+  type = string
+  description = "Domain for guest machines"
+}
