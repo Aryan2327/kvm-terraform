@@ -17,35 +17,11 @@ locals {
   subnet = "192.168.1.0/24"
 }
 
-resource "libvirt_cloudinit_disk" "commoninit" {
-  name = "commoninit.iso"
-  pool = libvirt_pool.ubuntu_pool.name
-  user_data = templatefile("${path.module}/cloud_init.cfg", {ssh_pubkey = var.ssh_pubkey, username = var.username})
-}
-
 resource "libvirt_pool" "ubuntu_pool" {
   name = "ubuntu_pool"
   type = "dir"
-  path = "/var/lib/libvirt/images" 
+  path = "/var/lib/libvirt/images"
 }
-
-resource "libvirt_volume" "ubuntu_image" {
-  count = var.vm_count
-  name = "ubuntu_amd64_guest${count.index}"
-  pool = libvirt_pool.ubuntu_pool.name
-  source = var.ubuntu_image_source
-}
-
-//resource "null_resource" "libvirt_network" {
-//  provisioner "local-exec" {
-//    command = "virsh net-define ${path.module}/libvirt_custom_network.xml && virsh net-start libvirt_custom_network"
-//  }
-
-//  provisioner "local-exec" {
-//    when = destroy
-//    command = "virsh net-destroy libvirt_custom_network && virsh net-undefine libvirt_custom_network"
-//  }
-//}
 
 resource "libvirt_network" "kube_network" {
   name = "k8snet"
@@ -53,16 +29,6 @@ resource "libvirt_network" "kube_network" {
   autostart = true
   mode = "nat"
   addresses = [local.subnet]
-  dns {
-    local_only = true
-    dynamic "hosts" {
-      for_each = var.hostnames
-      content {
-        ip = cidrhost(local.subnet, hosts.key+2)
-        hostname = hosts.value
-      }
-    }
-  }
   dhcp {
     enabled = false
   }
@@ -75,25 +41,29 @@ resource "libvirt_network" "kube_network" {
   }
 }
 
-resource "libvirt_domain" "kvm_guest" {
-  count = var.vm_count
-  name = var.hostnames[count.index]
-  description = "Kvm VM (Node ${count.index})"
-  vcpu = 1
-  memory = 2048
-  running = "true"
-  disk {
-    volume_id = libvirt_volume.ubuntu_image[count.index].id
-  }
-  network_interface {
-    network_name = libvirt_network.kube_network.name
-    hostname = var.hostnames[count.index]
-    addresses = [cidrhost(libvirt_network.kube_network.addresses[0], count.index+2)]
-    wait_for_lease = false
-  }
-  cloudinit = libvirt_cloudinit_disk.commoninit.id
+module "libvirt_workers" {
+  source = "./modules/worker_nodes"
+  master_vm_count = var.master_vm_count
+  worker_vm_count = var.worker_vm_count
+  worker_hostnames = var.worker_hostnames
+  pool_name = libvirt_pool.ubuntu_pool.name
+  ssh_pubkey = var.ssh_pubkey
+  username = var.username
+  ubuntu_image_source = var.ubuntu_image_source
+  network_name = libvirt_network.kube_network.name
+  subnet = local.subnet
+  domain = var.domain
+}
 
-  //depends_on = [
-    //null_resource.libvirt_network
-  //]
+module "libvirt_masters" {
+  source = "./modules/master_nodes"
+  master_vm_count = var.master_vm_count
+  master_hostnames = var.master_hostnames
+  pool_name = libvirt_pool.ubuntu_pool.name
+  ssh_pubkey = var.ssh_pubkey
+  username = var.username
+  ubuntu_image_source = var.ubuntu_image_source
+  network_name = libvirt_network.kube_network.name
+  subnet = local.subnet
+  domain = var.domain
 }
