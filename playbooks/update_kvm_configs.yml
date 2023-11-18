@@ -1,0 +1,46 @@
+---
+- name: Updating kvm sys configs to allow for kvm provisioning
+  hosts: kvm_host
+  connection: local
+
+  tasks:
+    - name: Add user to libvirt groups
+      ansible.builtin.user:
+        name: "{{ username }}"
+        groups: kvm, libvirt
+        append: yes
+
+    # Need to be able to create guest domains via terraform
+    - name: Turn off SElinux security driver for libvirt
+      block:
+        - name: Disable security driver
+          ansible.builtin.lineinfile:
+            path: /etc/libvirt/qemu.conf
+            line: 'security_driver = "none"'
+            state: present
+        - name: Restart libvirtd
+          ansible.builtin.systemd:
+            name: libvirtd
+            state: restarted
+
+    - name: Setup nss plugin for libvirt
+      block:
+        - name: Check for libvirt in nsswitch.conf
+          ansible.builtin.lineinfile:  
+            path: /etc/nsswitch.conf
+            regex: "^hosts:.*libvirt*"
+            state: absent
+          check_mode: true
+          changed_when: false
+          register: libvirt
+          become: false
+        - name: Edit nsswitch config
+          ansible.builtin.lineinfile:
+            path: /etc/nsswitch.conf
+            regex: "^(hosts:.*)"
+            line: "\1 libvirt"
+            backrefs: true
+          become: true
+          when: not libvirt.found
+
+ 

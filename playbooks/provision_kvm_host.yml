@@ -1,0 +1,29 @@
+---
+- name: Setting up KVM services on host machines
+  hosts: kvm_host
+  connection: local
+
+  tasks:
+    - name: Install necessary kvm package dependencies
+      block:
+        - name: Update and upgrade apt cache
+          ansible.builtin.apt:
+            update_cache: "yes"
+            upgrade: "yes"
+
+        - name: Install necessary debs
+          ansible.builtin.apt:
+            pkg:
+              - bridge-utils
+              - cpu-checker
+              - libvirt-clients
+              - libvirt-daemon
+              - qemu
+              - qemu-kvm
+              - libnss-libvirt
+            install_recommends: false
+
+    - name: Make sure that libvirtd is running
+      ansible.builtin.systemd:
+        name: libvirtd
+        state: started

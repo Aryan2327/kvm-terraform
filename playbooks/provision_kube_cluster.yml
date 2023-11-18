@@ -1,0 +1,22 @@
+---
+- name: Install necessary binaries onto kubernetes master and worker nodes
+  hosts: masters
+  become: true
+  tasks:
+    - name: Install prereq master dependencies
+      block:
+        - name: Update and upgrade apt cache
+          ansible.builtin.apt:
+            update_cache: "yes"
+            upgrade: "yes"
+
+          name: Install packages neeeded to use the Kubernetes apt repository
+          ansible.builtin.apt:
+            pkg:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - gpg
+            install_recommends: false
+
+
