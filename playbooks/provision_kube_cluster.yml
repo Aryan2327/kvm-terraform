@@ -1,6 +1,6 @@
 ---
 - name: Install necessary binaries onto kubernetes master and worker nodes
-  hosts: masters
+  hosts: kvm_cluster
   become: true
   tasks:
     - name: Install prereq master dependencies
@@ -10,7 +10,7 @@
             update_cache: "yes"
             upgrade: "yes"
 
-          name: Install packages neeeded to use the Kubernetes apt repository
+        - name: Install packages neeeded to use the Kubernetes apt repository
           ansible.builtin.apt:
             pkg:
               - apt-transport-https
@@ -19,4 +19,23 @@
               - gpg
             install_recommends: false
 
+    - name: Install kubelet, kubeadm, and kubectl
+      block:
+        - name: Download public signing apt-key
+          ansible.builtin.get_url:
+            url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+            dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
 
+        - name: Add kubernetes apt repository
+          ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+            state: present
+
+        - name: Install packages
+          ansible.builtin.apt:
+            update_cache: "yes"
+            pkg:
+              - kubelet
+              - kubeadm
+              - kubectl
+            install_recommends: false

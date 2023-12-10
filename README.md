@@ -14,7 +14,13 @@ An Ansible role is provided to install the necessary packages onto the hyperviso
 
 To set up the host machine, do the following:
 
-1.
+1. Install repository dependencies (terraform, libvirt, ...)
+
+2. Install Linux cloud image
+
+	$ chmod +x ./scripts/install_cloud_image.sh && ./scripts/install_image.sh
+
+Note that the source image and preferred size of guest vms can be specified within the script.
 ...
 
 ## Usage

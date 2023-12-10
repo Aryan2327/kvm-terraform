@@ -15,3 +15,8 @@ kvm_host:
     localhost:
       ansible_host: 127.0.0.1
       username: aryanc23
+
+kvm_cluster:
+  children:
+    masters:
+    workers:

@@ -1,6 +1,6 @@
 variable "ubuntu_image_source" {
   type = string
-  default = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
+  default = "./images/ubuntu_cloud.img"
   description = "Relative or remote source of Ubuntu OS image"
 }
 
