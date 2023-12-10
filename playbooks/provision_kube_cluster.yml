@@ -19,6 +19,64 @@
               - gpg
             install_recommends: false
 
+    - name: Install container runtime (containerd)
+      block:
+        - name: Extract archive
+          ansible.builtin.unarchive:
+            src: https://github.com/containerd/containerd/releases/download/v1.7.11/containerd-1.7.11-linux-amd64.tar.gz
+            dest: /usr/local
+            remote_src: true
+
+        - name: Download containerd unit configuration for systemd
+          ansible.builtin.get_url:
+            url: https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+            dest: /usr/lib/systemd/system/containerd.service
+
+        - name: Create containerd config directory (if does not exist)
+          ansible.builtin.file:
+            path: /etc/containerd
+            state: directory
+            mode: '755'        
+
+        - name: Create containerd config.toml (if does not exist)
+          ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+          args:
+            creates: /etc/containerd/config.toml
+
+        - name: Modify config to use the systemd cgroup driver with runc
+          ansible.builtin.replace:
+            path: /etc/containerd/config.toml
+            regexp: '^(\s+)SystemdCgroup = false'
+            replace: '\1SystemdCgroup = true'
+
+    - name: Install runc
+      block:
+        - name: Create installation directory (if does not exist)
+          ansible.builtin.file:
+            path: /usr/local/sbin/runc
+            state: directory
+            mode: '755'
+
+        - name: Install runc binary
+          ansible.builtin.get_url:
+            url: https://github.com/opencontainers/runc/releases/download/v1.1.10/runc.amd64
+            mode: '755'
+            dest: /usr/local/sbin/runc/runc.amd64
+
+    - name: Install CNI plugins
+      block:
+        - name: Create installation directory (if does not exist)
+          ansible.builtin.file:
+            path: /opt/cni/bin
+            state: directory
+            mode: '755'
+
+        - name: Install CNI plugin binaries
+          ansible.builtin.unarchive:
+            src: https://github.com/containernetworking/plugins/releases/download/v1.4.0/cni-plugins-linux-amd64-v1.4.0.tgz
+            dest: /opt/cni/bin
+            remote_src: true
+
     - name: Install kubelet, kubeadm, and kubectl
       block:
         - name: Download public signing apt-key
