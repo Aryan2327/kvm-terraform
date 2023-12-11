@@ -2,6 +2,9 @@
 
 ## Table of Contents
 
+## Prerequisites
+Ansible (community.general collection)
+
 ## Introduction
 
 This is a tool for setting up a on-prem Kubernetes cluster via KVM virtualization. KVM guest machines are spun up via Terraform and cloud-init; machine provisioning is performed via Ansible.

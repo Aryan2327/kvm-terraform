@@ -3,7 +3,7 @@
   hosts: kvm_cluster
   become: true
   tasks:
-    - name: Install prereq master dependencies
+    - name: Install prereq cluster dependencies
       block:
         - name: Update and upgrade apt cache
           ansible.builtin.apt:
@@ -17,6 +17,13 @@
               - ca-certificates
               - curl
               - gpg
+            install_recommends: false
+
+        - name: Install extra helpful utilities
+          ansible.builtin.apt:
+            pkg:
+              - bridge-utils
+              - net-tools
             install_recommends: false
 
     - name: Install container runtime (containerd)
@@ -53,7 +60,7 @@
       block:
         - name: Create installation directory (if does not exist)
           ansible.builtin.file:
-            path: /usr/local/sbin/runc
+            path: /usr/local/sbin
             state: directory
             mode: '755'
 
@@ -61,7 +68,7 @@
           ansible.builtin.get_url:
             url: https://github.com/opencontainers/runc/releases/download/v1.1.10/runc.amd64
             mode: '755'
-            dest: /usr/local/sbin/runc/runc.amd64
+            dest: /usr/local/sbin/runc
 
     - name: Install CNI plugins
       block:
@@ -97,3 +104,8 @@
               - kubeadm
               - kubectl
             install_recommends: false
+
+    - name: Add br_netfilter kernel module
+      community.general.modprobe:
+        name: br_netfilter
+        state: present
